@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
+import { authFetch } from '../lib/api.js';
 
 function SalesDashboard({ apiBaseUrl }) {
   const [receipts, setReceipts] = useState([]);
@@ -39,7 +40,7 @@ function SalesDashboard({ apiBaseUrl }) {
         setLoading(true);
         setError('');
 
-        const response = await fetch(`${apiBaseUrl}/api/receipts`);
+        const response = await authFetch(`${apiBaseUrl}/api/receipts`);
         const data = await response.json();
 
         if (!response.ok) {

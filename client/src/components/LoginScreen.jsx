@@ -1,20 +1,46 @@
-import { LogIn } from 'lucide-react';
+import { LogIn, UserPlus } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext.jsx';
 
-function LoginScreen({ onLogin }) {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-  });
+const fieldClass = 'editor-field w-full border px-3 py-2.5 text-sm outline-none transition';
+
+function friendlyError(message) {
+  // Map the raw Supabase message to something a user can act on.
+  if (!message) return 'Something went wrong. Please try again.';
+  if (/invalid login credentials/i.test(message)) {
+    return 'Wrong email or password.';
+  }
+  if (/email not confirmed/i.test(message)) {
+    return 'Check your inbox and click the confirmation link before signing in.';
+  }
+  if (/already registered|already been registered/i.test(message)) {
+    return 'An account with this email already exists. Try signing in.';
+  }
+  if (/rate limit|too many/i.test(message)) {
+    return 'Too many attempts. Please wait a moment and try again.';
+  }
+  if (/password should be at least/i.test(message)) {
+    return 'Password must be at least 6 characters.';
+  }
+  return message;
+}
+
+function LoginScreen() {
+  const { signIn, signUp, resetPassword } = useAuth();
+  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
     setError('');
+    setInfo('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!form.email.trim() || !form.password.trim()) {
@@ -22,32 +48,87 @@ function LoginScreen({ onLogin }) {
       return;
     }
 
-    onLogin({
-      name: form.name.trim(),
-      email: form.email.trim(),
-    });
+    setBusy(true);
+    setError('');
+    setInfo('');
+
+    try {
+      if (mode === 'signup') {
+        const { data, error: signUpError } = await signUp(
+          form.email.trim(),
+          form.password,
+          form.name.trim(),
+        );
+        if (signUpError) {
+          setError(friendlyError(signUpError.message));
+        } else if (!data.session) {
+          // Email confirmation required — no session yet.
+          setInfo('Account created. Check your inbox to confirm your email, then sign in.');
+          setMode('signin');
+        }
+        // If a session came back immediately, onAuthStateChange handles the rest.
+      } else {
+        const { error: signInError } = await signIn(form.email.trim(), form.password);
+        if (signInError) {
+          setError(friendlyError(signInError.message));
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
   };
+
+  const handleForgotPassword = async () => {
+    if (!form.email.trim()) {
+      setError('Enter your email above first, then tap "Forgot password?".');
+      return;
+    }
+    setResetting(true);
+    setError('');
+    setInfo('');
+    try {
+      const { error: resetError } = await resetPassword(form.email.trim());
+      if (resetError) {
+        setError(friendlyError(resetError.message));
+      } else {
+        setInfo('Password reset link sent — check your inbox.');
+      }
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const switchMode = (next) => {
+    setMode(next);
+    setError('');
+    setInfo('');
+  };
+
+  const isSignUp = mode === 'signup';
 
   return (
     <main className="login-shell">
       <form className="login-panel" onSubmit={handleSubmit}>
         <div className="login-mark">RG</div>
-        <p className="login-kicker">Receipt Studio</p>
-        <h1>Sign in</h1>
+        <p className="login-kicker">LedgerX</p>
+        <h1>{isSignUp ? 'Create account' : 'Sign in'}</h1>
 
-        <label>
-          <span>Name</span>
-          <input
-            autoComplete="name"
-            placeholder="Your name"
-            value={form.name}
-            onChange={(event) => updateField('name', event.target.value)}
-          />
-        </label>
+        {isSignUp && (
+          <label>
+            <span>Name</span>
+            <input
+              autoComplete="name"
+              placeholder="Your name"
+              value={form.name}
+              onChange={(event) => updateField('name', event.target.value)}
+            />
+          </label>
+        )}
 
         <label>
           <span>Email</span>
           <input
+            className={fieldClass}
             autoComplete="email"
             placeholder="name@example.com"
             type="email"
@@ -59,7 +140,8 @@ function LoginScreen({ onLogin }) {
         <label>
           <span>Password</span>
           <input
-            autoComplete="current-password"
+            className={fieldClass}
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
             placeholder="Enter password"
             type="password"
             value={form.password}
@@ -68,11 +150,34 @@ function LoginScreen({ onLogin }) {
         </label>
 
         {error && <p className="login-error">{error}</p>}
+        {info && <p className="login-info">{info}</p>}
 
-        <button className="login-button" type="submit">
-          <LogIn size={18} />
-          Login
+        <button className="login-button" type="submit" disabled={busy}>
+          {isSignUp ? <UserPlus size={18} /> : <LogIn size={18} />}
+          {busy ? 'Please wait…' : isSignUp ? 'Create account' : 'Login'}
         </button>
+
+        {!isSignUp && (
+          <button
+            type="button"
+            className="login-link"
+            onClick={handleForgotPassword}
+            disabled={resetting}
+          >
+            {resetting ? 'Sending…' : 'Forgot password?'}
+          </button>
+        )}
+
+        <p className="login-toggle">
+          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+          <button
+            type="button"
+            className="login-link"
+            onClick={() => switchMode(isSignUp ? 'signin' : 'signup')}
+          >
+            {isSignUp ? 'Sign in' : 'Create one'}
+          </button>
+        </p>
       </form>
     </main>
   );

@@ -1,5 +1,6 @@
 import { Plus, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
+import { authFetch } from '../lib/api.js';
 
 const fieldClass =
   'editor-field w-full border px-3 py-2.5 text-sm outline-none transition';
@@ -29,7 +30,7 @@ function EditorPanel({ apiBaseUrl, receipt, updateReceipt, updateItems }) {
       setUploadingField(field);
       setUploadError('');
 
-      const response = await fetch(`${apiBaseUrl}/api/upload`, {
+      const response = await authFetch(`${apiBaseUrl}/api/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -104,11 +105,8 @@ function EditorPanel({ apiBaseUrl, receipt, updateReceipt, updateItems }) {
         items: receipt.items,
       };
 
-      const response = await fetch(`${apiBaseUrl}/api/receipts`, {
+      const response = await authFetch(`${apiBaseUrl}/api/receipts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       });
 
@@ -175,7 +173,7 @@ function EditorPanel({ apiBaseUrl, receipt, updateReceipt, updateItems }) {
               </label>
               {receipt.logoUrl && (
                 <button
-                  className="text-sm font-semibold text-[#b55432] hover:text-[#8f4228]"
+                  className="text-sm font-semibold text-[#ff0000] hover:text-[#cc0000]"
                   onClick={() => updateReceipt('logoUrl', '')}
                   type="button"
                 >
@@ -345,7 +343,7 @@ function EditorPanel({ apiBaseUrl, receipt, updateReceipt, updateItems }) {
               </label>
               {receipt.barcodeUrl && (
                 <button
-                  className="text-sm font-semibold text-[#b55432] hover:text-[#8f4228]"
+                  className="text-sm font-semibold text-[#ff0000] hover:text-[#cc0000]"
                   onClick={() => updateReceipt('barcodeUrl', '')}
                   type="button"
                 >
