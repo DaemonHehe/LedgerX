@@ -4,6 +4,168 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Nothing UI Template Cards */
+.template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.template-card:hover {
+  border-color: var(--accent-red);
+}
+
+.template-card.selected {
+  border-color: var(--accent-red);
+  background: var(--bg-secondary);
+}
+
+.template-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.template-card-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.template-card-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.template-card-date {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.template-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.template-card-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg-secondary);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.template-card-edit-btn:hover {
+  background: var(--bg-primary);
+}
+
+.template-card-use-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--accent-red);
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent-red);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.template-card-use-btn:hover:not(:disabled) {
+  background: var(--accent-red-dim);
+}
+
+.template-card-use-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Nothing UI ag-grid Styling */
+.ledgerx-grid {
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+
+.ledgerx-grid .ag-root-wrapper {
+  border-radius: 0;
+}
+
+.ledgerx-grid .ag-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--line);
+}
+
+.ledgerx-grid .ag-header-cell {
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+}
+
+.ledgerx-grid .ag-header-cell-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.ledgerx-grid .ag-cell {
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.ledgerx-grid .ag-row {
+  border-bottom: 1px solid var(--line);
+}
+
+.ledgerx-grid .ag-row:hover {
+  background: var(--bg-secondary);
+}
+
+.ledgerx-grid .ag-paging-panel {
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg-primary);
+}
+
+.ledgerx-grid .ag-paging-button {
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg-secondary);
+  color: var(--ink);
+}
+
+.ledgerx-grid .ag-paging-button:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+/* Export Node for Receipt Preview */
+#export-node {
+  /* Ensures proper rendering for html2canvas */
+  transform: none;
+  opacity: 1;
+}
+
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #f5f5f5;

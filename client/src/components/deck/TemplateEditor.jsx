@@ -7,16 +7,19 @@
 //   • Drag on empty canvas (Selecto marquee) → multi-select the hits.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Save, Upload, Camera } from 'lucide-react';
 import Selecto from 'react-selecto';
 import useTemplate, { SAVE_STATUS } from '../../hooks/useTemplate.js';
 import { createElement, FORM_FIELD_TYPES } from '../../lib/deckModel.js';
 import { clientToLogical, clampToSurface } from '../../lib/canvasCoords.js';
 import { exportSlidePng } from '../../lib/slideExport.js';
+import { authFetch } from '../../lib/api.js';
+import { convertToStandardSchema } from '../../lib/templateSchema.js';
 import CanvasSlide from '../canvas/CanvasSlide.jsx';
 import ElementPalette from './ElementPalette.jsx';
 import PropertiesPanel from './PropertiesPanel.jsx';
 import SaveBadge from './SaveBadge.jsx';
+import ImportImageButton from '../ImportImageButton.jsx';
 
 export default function TemplateEditor({ apiBaseUrl, templateId }) {
   const {
@@ -32,6 +35,8 @@ export default function TemplateEditor({ apiBaseUrl, templateId }) {
     deleteElements,
     reorderElement,
     selectElements,
+    exportToStandardSchema,
+    applyTemplate,
   } = useTemplate({ apiBaseUrl, templateId });
   const stageRef = useRef(null);
 
@@ -98,6 +103,58 @@ export default function TemplateEditor({ apiBaseUrl, templateId }) {
     );
   }, [template]);
 
+  const handleSaveTemplate = useCallback(async () => {
+    try {
+      // Convert to standard schema
+      const standardSchema = convertToStandardSchema(template);
+      
+      const payload = {
+        name: template.title || 'Untitled Template',
+        schema_json: standardSchema,
+      };
+
+      let response;
+      if (template.id) {
+        // Update existing template
+        response = await authFetch(`${apiBaseUrl}/api/templates/${template.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Create new template
+        response = await authFetch(`${apiBaseUrl}/api/templates`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to save template');
+      }
+
+      const savedTemplate = await response.json();
+      
+      // Update the template ID if it was newly created by applying the saved template
+      if (!template.id && savedTemplate.id) {
+        applyTemplate({
+          ...template,
+          id: savedTemplate.id,
+        });
+      }
+
+      // Optional: Show success feedback
+      console.log('Template saved successfully:', savedTemplate);
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      // Optional: Show error feedback
+    }
+  }, [template, apiBaseUrl, applyTemplate]);
+
+  const handleAnalysisComplete = useCallback((templateData) => {
+    // Inject the AI-generated template into the current state
+    applyTemplate(templateData);
+  }, [applyTemplate]);
+
   const isIdle = saveStatus === SAVE_STATUS.IDLE || saveStatus === SAVE_STATUS.SAVED;
 
   return (
@@ -111,6 +168,14 @@ export default function TemplateEditor({ apiBaseUrl, templateId }) {
         </div>
         <div className="deck-toolbar-actions">
           <SaveBadge status={saveStatus} />
+          <ImportImageButton 
+            onAnalysisComplete={handleAnalysisComplete}
+            apiBaseUrl={apiBaseUrl}
+          />
+          <button type="button" className="editor-secondary" onClick={handleSaveTemplate}>
+            <Save size={16} />
+            Save Template JSON
+          </button>
           <button type="button" className="editor-secondary" onClick={handleExport}>
             <Download size={16} />
             Export PNG

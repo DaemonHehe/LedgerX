@@ -5,6 +5,7 @@ import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { createClient } from '@supabase/supabase-js';
 import FormData from 'form-data';
+import OpenAI from 'openai';
 
 dotenv.config();
 
@@ -33,6 +34,10 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+// OpenAI configuration
+const openaiApiKey = process.env.OPENAI_API_KEY;
+const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -266,6 +271,59 @@ app.post('/api/receipts/analyze', requireAuth, upload.single('image'), async (re
   }
 });
 
+// ---------- Template Analysis (OpenAI GPT-4o) ----------
+
+app.post('/api/templates/analyze', requireAuth, upload.single('image'), async (request, response) => {
+  try {
+    if (!request.file) {
+      return response.status(400).json({ error: 'No image file provided.' });
+    }
+
+    if (!openai) {
+      return response.status(500).json({ error: 'OpenAI API key not configured.' });
+    }
+
+    // Convert buffer to base64 data URI
+    const base64Image = `data:${request.file.mimetype};base64,${request.file.buffer.toString('base64')}`;
+
+    // Call OpenAI GPT-4o with the image
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert UI layout engine. Analyze this physical receipt image and convert it into a digital template JSON schema. The canvas width should be 400. Estimate the canvas height based on the content. Map every piece of text into the \'elements\' array. Return ONLY a JSON object matching this schema: { canvas: { width: 400, height: number, backgroundColor: \'#ffffff\' }, elements: [ { id: \'el_uuid\', type: \'text\', content: \'string\', x: number, y: number, fontSize: number, isDynamic: boolean, fieldKey: \'string_if_dynamic\' } ] }. Estimate X and Y coordinates to replicate the visual layout. If a text field represents a variable (customer name, date, specific item prices, total amount), set isDynamic: true and assign a snake_case fieldKey. If it is static (store name, headers, \'Thank You\'), set isDynamic: false.'
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Analyze this receipt image and generate a template JSON.'
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: base64Image
+              }
+            }
+          ]
+        }
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: 4096,
+    });
+
+    const generatedContent = completion.choices[0].message.content;
+    const parsedJson = JSON.parse(generatedContent);
+
+    return response.json(parsedJson);
+  } catch (error) {
+    console.error('OpenAI analysis error:', error);
+    return response.status(500).json({ error: error.message || 'Template analysis failed.' });
+  }
+});
+
 // ---------- Canva decks (owner-scoped) ----------
 
 app.get('/api/decks', requireAuth, async (request, response) => {
@@ -374,6 +432,187 @@ app.put('/api/decks/:id', requireAuth, async (request, response) => {
 app.delete('/api/decks/:id', requireAuth, async (request, response) => {
   const { error } = await supabase
     .from('canva_decks')
+    .delete()
+    .eq('id', request.params.id)
+    .eq('user_id', request.user.id);
+
+  if (error) {
+    return response.status(500).json({ error: error.message });
+  }
+
+  return response.status(204).send();
+});
+
+// ---------- LedgerX Templates (owner-scoped) ----------
+
+app.get('/api/templates', requireAuth, async (request, response) => {
+  const { data, error } = await supabase
+    .from('templates')
+    .select('id, name, schema_json, created_at, updated_at')
+    .eq('user_id', request.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    return response.status(500).json({ error: error.message });
+  }
+
+  return response.json(data);
+});
+
+app.get('/api/templates/:id', requireAuth, async (request, response) => {
+  const { data, error } = await supabase
+    .from('templates')
+    .select('*')
+    .eq('id', request.params.id)
+    .eq('user_id', request.user.id)
+    .single();
+
+  if (error) {
+    return response.status(404).json({ error: error.message });
+  }
+
+  return response.json(data);
+});
+
+app.post('/api/templates', requireAuth, async (request, response) => {
+  const { name, schema_json } = request.body;
+
+  // Input validation
+  if (typeof name !== 'string' || name.length > 255) {
+    return response.status(400).json({ error: 'Invalid name.' });
+  }
+  if (!schema_json || typeof schema_json !== 'object') {
+    return response.status(400).json({ error: 'Invalid schema_json.' });
+  }
+
+  const record = {
+    name: name || 'Untitled Template',
+    schema_json,
+    user_id: request.user.id,
+  };
+
+  const { data, error } = await supabase
+    .from('templates')
+    .insert(record)
+    .select()
+    .single();
+
+  if (error) {
+    return response.status(500).json({ error: error.message });
+  }
+
+  return response.status(201).json(data);
+});
+
+app.put('/api/templates/:id', requireAuth, async (request, response) => {
+  const { name, schema_json } = request.body;
+  const changes = {};
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || name.length > 255) {
+      return response.status(400).json({ error: 'Invalid name.' });
+    }
+    changes.name = name;
+  }
+
+  if (schema_json !== undefined) {
+    if (!schema_json || typeof schema_json !== 'object') {
+      return response.status(400).json({ error: 'Invalid schema_json.' });
+    }
+    changes.schema_json = schema_json;
+  }
+
+  const { data, error } = await supabase
+    .from('templates')
+    .update(changes)
+    .eq('id', request.params.id)
+    .eq('user_id', request.user.id)
+    .select()
+    .single();
+
+  if (error) {
+    return response.status(500).json({ error: error.message });
+  }
+
+  return response.json(data);
+});
+
+app.delete('/api/templates/:id', requireAuth, async (request, response) => {
+  const { error } = await supabase
+    .from('templates')
+    .delete()
+    .eq('id', request.params.id)
+    .eq('user_id', request.user.id);
+
+  if (error) {
+    return response.status(500).json({ error: error.message });
+  }
+
+  return response.status(204).send();
+});
+
+// ---------- LedgerX Receipts (owner-scoped) ----------
+
+app.get('/api/receipts', requireAuth, async (request, response) => {
+  const { data, error } = await supabase
+    .from('receipts')
+    .select(`
+      id,
+      template_id,
+      form_data,
+      created_at,
+      templates (
+        name
+      )
+    `)
+    .eq('user_id', request.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    return response.status(500).json({ error: error.message });
+  }
+
+  return response.json(data);
+});
+
+app.post('/api/receipts', requireAuth, async (request, response) => {
+  const { template_id, form_data } = request.body;
+
+  // Input validation
+  if (template_id !== undefined && typeof template_id !== 'string') {
+    return response.status(400).json({ error: 'Invalid template_id.' });
+  }
+  if (!form_data || typeof form_data !== 'object') {
+    return response.status(400).json({ error: 'Invalid form_data.' });
+  }
+
+  const record = {
+    template_id: template_id || null,
+    form_data,
+    user_id: request.user.id,
+  };
+
+  const { data, error } = await supabase
+    .from('receipts')
+    .insert(record)
+    .select(`
+      *,
+      templates (
+        name
+      )
+    `)
+    .single();
+
+  if (error) {
+    return response.status(500).json({ error: error.message });
+  }
+
+  return response.status(201).json(data);
+});
+
+app.delete('/api/receipts/:id', requireAuth, async (request, response) => {
+  const { error } = await supabase
+    .from('receipts')
     .delete()
     .eq('id', request.params.id)
     .eq('user_id', request.user.id);

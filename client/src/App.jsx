@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas';
 import { Download, LogOut } from 'lucide-react';
 import { BrowserRouter, NavLink, Route, Routes, useNavigate, useLocation, useParams } from 'react-router-dom';
 import ReceiptPreview from './components/ReceiptPreview.jsx';
+import ReceiptPreviewNew from './components/ReceiptPreviewNew.jsx';
 import EditorPanel from './components/EditorPanel.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
 import ProfileScreen from './components/ProfileScreen.jsx';
@@ -338,6 +339,68 @@ function Shell() {
     return <TemplateEditor apiBaseUrl={apiBaseUrl} templateId={id} />;
   }
 
+  function ReceiptPreviewRoute({ apiBaseUrl }) {
+    const { id } = useParams();
+    const [templateData, setTemplateData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchTemplate = async () => {
+        try {
+          const response = await authFetch(`${apiBaseUrl}/api/templates/${id}`);
+          if (response.ok) {
+            const data = await response.json();
+            // Convert standard schema back to legacy format for useTemplate
+            const legacyTemplate = {
+              id: data.id,
+              title: data.name,
+              background: data.schema_json?.backgroundColor || '#ffffff',
+              elements: data.schema_json?.elements?.map((el) => ({
+                id: el.id,
+                type: el.type,
+                x: el.x,
+                y: el.y,
+                width: el.width,
+                height: el.height,
+                rotation: el.rotation || 0,
+                zIndex: el.zIndex || 0,
+                isDynamic: el.isDynamic || false,
+                formFieldType: el.isDynamic ? el.fieldKey : null,
+                placeholderText: el.isDynamic ? `{{${el.fieldKey}}}` : null,
+                props: {
+                  text: el.content,
+                  fontSize: el.fontSize,
+                  fontFamily: el.fontFamily,
+                  fontWeight: el.fontWeight,
+                  color: el.color,
+                  textAlign: el.textAlign,
+                  lineHeight: el.lineHeight,
+                },
+              })) || [],
+            };
+            setTemplateData(legacyTemplate);
+          }
+        } catch (error) {
+          console.error('Failed to fetch template:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchTemplate();
+    }, [apiBaseUrl, id]);
+
+    if (loading) {
+      return <div className="flex h-full items-center justify-center">Loading template...</div>;
+    }
+
+    if (!templateData) {
+      return <div className="flex h-full items-center justify-center">Template not found</div>;
+    }
+
+    return <ReceiptPreviewNew templateId={id} templateData={templateData} />;
+  }
+
   if (loading) {
     return (
       <main className="app-shell grid min-h-screen place-items-center text-neutral-950">
@@ -390,6 +453,10 @@ function Shell() {
             }
           />
           <Route path="/sales" element={<SalesDashboard apiBaseUrl={API_BASE_URL} />} />
+          <Route
+            path="/preview/:id"
+            element={<ReceiptPreviewRoute apiBaseUrl={API_BASE_URL} />}
+          />
           <Route
             path="/deck"
             element={

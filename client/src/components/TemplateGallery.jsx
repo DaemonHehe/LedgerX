@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Plus, Image as ImageIcon, Search, X } from 'lucide-react';
+import { Plus, Image as ImageIcon, Search, X, Edit, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { authFetch } from '../lib/api.js';
 import ImportImageButton from './ImportImageButton.jsx';
-import { TEMPLATES as LOCAL_TEMPLATES } from '../lib/templates.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 export default function TemplateGallery({ onSelectTemplate, onCreateNew, onImportFromImage, apiBaseUrl }) {
-  const [templates, setTemplates] = useState(LOCAL_TEMPLATES);
+  const navigate = useNavigate();
+  const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -15,21 +16,10 @@ export default function TemplateGallery({ onSelectTemplate, onCreateNew, onImpor
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await authFetch(`${apiBaseUrl}/api/decks`);
+        const response = await authFetch(`${apiBaseUrl}/api/templates`);
         if (response.ok) {
           const data = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setTemplates((current) => {
-              const existingIds = new Set(current.map((template) => template.id));
-              const merged = [...current];
-              data.forEach((template) => {
-                if (!existingIds.has(template.id)) {
-                  merged.push(template);
-                }
-              });
-              return merged;
-            });
-          }
+          setTemplates(Array.isArray(data) ? data : []);
         }
       } catch (error) {
         console.error('Failed to fetch templates:', error);
@@ -42,7 +32,7 @@ export default function TemplateGallery({ onSelectTemplate, onCreateNew, onImpor
   }, [apiBaseUrl]);
 
   const filteredTemplates = templates.filter(template =>
-    template.title.toLowerCase().includes(searchQuery.toLowerCase())
+    template.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleTemplateClick = (template) => {
@@ -51,21 +41,25 @@ export default function TemplateGallery({ onSelectTemplate, onCreateNew, onImpor
 
   const handleUseTemplate = () => {
     if (selectedTemplate) {
-      onSelectTemplate(selectedTemplate);
+      navigate(`/preview/${selectedTemplate.id}`);
     }
   };
 
+  const handleEditTemplate = (template, event) => {
+    event.stopPropagation();
+    navigate(`/deck/${template.id}`);
+  };
+
   const handleCreateNew = () => {
-    onCreateNew();
+    navigate('/deck');
   };
 
   const handleAnalysisComplete = (data) => {
-    // Convert n8n response to template format
+    // Convert AI response to template format
     const templateData = {
       title: data.deck_name || 'Imported Receipt',
       background: '#ffffff',
       elements: data.elements?.map((elem) => {
-        // Map n8n element format to our canvas element format
         const baseElement = {
           id: elem.id,
           type: elem.type,
@@ -81,7 +75,6 @@ export default function TemplateGallery({ onSelectTemplate, onCreateNew, onImpor
           props: {},
         };
 
-        // Set type-specific props
         if (elem.type === 'text') {
           baseElement.props = {
             text: elem.content || '',
@@ -113,7 +106,7 @@ export default function TemplateGallery({ onSelectTemplate, onCreateNew, onImpor
             <p className="template-gallery-eyebrow">Templates first</p>
             <h2 className="template-gallery-title">Start with a design, then customize it</h2>
             <p className="template-gallery-subtitle">
-              Browse ready-made receipt layouts, or choose a blank canvas when you want to build from scratch.
+              Browse your receipt templates, or create a new one from scratch.
             </p>
           </div>
           <button
@@ -177,112 +170,44 @@ export default function TemplateGallery({ onSelectTemplate, onCreateNew, onImpor
           ) : (
             <div className="template-gallery-grid">
               {filteredTemplates.map((template) => {
-                const variant = template.id === 'coffee-house'
-                  ? { bg: '#fff7e8', accent: '#c96b29', title: '#2f2418', badge: '#f3d8b2', rows: ['#fff2d6', '#fffaf1'] }
-                  : template.id === 'boutique-bakery'
-                    ? { bg: '#fffaf4', accent: '#d95f90', title: '#4d2434', badge: '#ffe2ea', rows: ['#fff0f5', '#fff7fb'] }
-                    : template.id === 'minimal-grocery'
-                      ? { bg: '#f5f6ef', accent: '#3f6b3d', title: '#233423', badge: '#dde9d7', rows: ['#eef4e8', '#f8fbf3'] }
-                      : template.id === 'cinema-stub'
-                        ? { bg: '#f7f7fb', accent: '#444b8f', title: '#1d2146', badge: '#dfe2f7', rows: ['#f1f3ff', '#f8f9ff'] }
-                        : { bg: '#ffffff', accent: '#111111', title: '#111111', badge: '#f1f1f1', rows: ['#fafafa', '#ffffff'] };
-
-                const headerText = (template.title || 'Receipt').split(' ').slice(0, 2).join(' ').toUpperCase();
+                const elementCount = template.schema_json?.elements?.length || 0;
+                const createdAt = new Date(template.created_at).toLocaleDateString();
 
                 return (
-                  <button
+                  <div
                     key={template.id}
-                    type="button"
-                    className={`template-gallery-item ${selectedTemplate?.id === template.id ? 'selected' : ''}`}
+                    className={`template-card ${selectedTemplate?.id === template.id ? 'selected' : ''}`}
                     onClick={() => handleTemplateClick(template)}
                   >
-                    <div className="template-gallery-item-preview">
-                      <div
-                        className="template-gallery-item-preview-bg"
-                        style={{ backgroundColor: variant.bg }}
+                    <div className="template-card-content">
+                      <h3 className="template-card-name">{template.name}</h3>
+                      <p className="template-card-meta">{elementCount} elements</p>
+                      <p className="template-card-date">{createdAt}</p>
+                    </div>
+                    <div className="template-card-actions">
+                      <button
+                        className="template-card-edit-btn"
+                        onClick={(e) => handleEditTemplate(template, e)}
+                        type="button"
                       >
-                        <div className="template-gallery-item-preview-receipt">
-                          <div className="receipt-paper template-gallery-receipt-paper" style={{ backgroundColor: variant.bg }}>
-                            <header className="receipt-header">
-                              <div className="receipt-logo" aria-hidden="true">
-                                <div className="waveform" style={{ gap: '3px' }}>
-                                  <span style={{ backgroundColor: variant.accent }} />
-                                  <span style={{ backgroundColor: variant.accent }} />
-                                  <span style={{ backgroundColor: variant.accent }} />
-                                  <span style={{ backgroundColor: variant.accent }} />
-                                  <span style={{ backgroundColor: variant.accent }} />
-                                  <span style={{ backgroundColor: variant.accent }} />
-                                  <span style={{ backgroundColor: variant.accent }} />
-                                </div>
-                              </div>
-                              <h2 style={{ color: variant.title }}>{headerText}</h2>
-                              <p style={{ color: variant.accent }}>{template.title || 'Receipt Layout'}</p>
-                            </header>
-
-                            <div className="receipt-divider" style={{ color: variant.accent }}>--------------------------------</div>
-
-                            <section className="receipt-meta">
-                              <p>
-                                <span style={{ color: variant.title }}>CUSTOMER</span>
-                                <strong style={{ color: variant.title }}>WALK-IN</strong>
-                              </p>
-                              <p>
-                                <span style={{ color: variant.title }}>DATE</span>
-                                <strong style={{ color: variant.title }}>2026-07-02</strong>
-                              </p>
-                            </section>
-
-                            <div className="receipt-divider" style={{ color: variant.accent }}>--------------------------------</div>
-
-                            <section>
-                              <div className="receipt-row receipt-table-head" style={{ color: variant.title }}>
-                                <span>NO</span>
-                                <span>ITEM</span>
-                                <span>QTY</span>
-                                <span>AMT</span>
-                              </div>
-                              <div className="receipt-row" style={{ backgroundColor: variant.rows[0], padding: '2px 4px' }}>
-                                <span>01</span>
-                                <span>Item A</span>
-                                <span>1</span>
-                                <span>4.50</span>
-                              </div>
-                              <div className="receipt-row" style={{ backgroundColor: variant.rows[1], padding: '2px 4px' }}>
-                                <span>02</span>
-                                <span>Item B</span>
-                                <span>2</span>
-                                <span>7.20</span>
-                              </div>
-                            </section>
-
-                            <div className="receipt-divider" style={{ color: variant.accent }}>--------------------------------</div>
-
-                            <section className="receipt-totals">
-                              <p>
-                                <span style={{ color: variant.title }}>TOTAL ITEMS</span>
-                                <strong style={{ color: variant.title }}>02</strong>
-                              </p>
-                              <p>
-                                <span style={{ color: variant.title }}>GRAND TOTAL</span>
-                                <strong style={{ color: variant.accent }}>$11.70</strong>
-                              </p>
-                            </section>
-                          </div>
-                        </div>
-                      </div>
+                        <Edit size={14} />
+                        Edit
+                      </button>
+                      <button
+                        className="template-card-use-btn"
+                        onClick={handleUseTemplate}
+                        type="button"
+                        disabled={!selectedTemplate}
+                      >
+                        Use Template
+                        <ArrowRight size={14} />
+                      </button>
                     </div>
-                    <div className="template-gallery-item-info">
-                      <h3 className="template-gallery-item-title">{template.title}</h3>
-                      <p className="template-gallery-item-meta">
-                        {template.elements?.length || 0} elements
-                      </p>
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
           )}
-        </div>
 
         {selectedTemplate && (
           <div className="template-gallery-footer">
@@ -291,7 +216,7 @@ export default function TemplateGallery({ onSelectTemplate, onCreateNew, onImpor
               onClick={handleUseTemplate}
               type="button"
             >
-              Use Template: {selectedTemplate.title}
+              Use Template: {selectedTemplate.name}
             </button>
           </div>
         )}

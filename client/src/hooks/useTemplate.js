@@ -5,6 +5,7 @@ import {
   normalizeTemplate,
 } from '../lib/deckModel.js';
 import { authFetch } from '../lib/api.js';
+import { convertToStandardSchema } from '../lib/templateSchema.js';
 
 const STORAGE_KEY = 'template-editor-state';
 const SAVE_DEBOUNCE_MS = 1000;
@@ -291,6 +292,12 @@ export default function useTemplate({ apiBaseUrl, templateId } = {}) {
     }
   }, []);
 
+  // --- export to standard schema ---
+
+  const exportToStandardSchema = useCallback(() => {
+    return convertToStandardSchema(template);
+  }, [template]);
+
   return {
     template,
     selectedIds,
@@ -305,5 +312,6 @@ export default function useTemplate({ apiBaseUrl, templateId } = {}) {
     reorderElement,
     selectElements,
     applyTemplate,
+    exportToStandardSchema,
   };
 }
