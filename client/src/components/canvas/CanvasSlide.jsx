@@ -10,11 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Moveable from 'react-moveable';
 import { Trash2 } from 'lucide-react';
-import {
-  CANVAS_HEIGHT,
-  CANVAS_WIDTH,
-  FORM_FIELD_TYPES,
-} from '../../lib/deckModel.js';
+import { FORM_FIELD_TYPES } from '../../lib/deckModel.js';
 import {
   isElementDragEvent,
   readElementDragType,
@@ -27,6 +23,7 @@ export default function CanvasSlide({
   selectedElements,
   onSelect,
   onChange,
+  onUpdateElements,
   onDeleteElements,
   onDropElement = null,
   editable = true,
@@ -56,6 +53,9 @@ export default function CanvasSlide({
   // Fit the logical surface into its container while preserving aspect ratio.
   // Recomputed on container resize via ResizeObserver.
   const containerRef = useRef(null);
+  const slideWidth = slide.width || 1280;
+  const slideHeight = slide.height || 720;
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
@@ -63,7 +63,8 @@ export default function CanvasSlide({
     const measure = () => {
       const { width, height } = container.getBoundingClientRect();
       if (!width || !height) return;
-      const next = Math.min(width / CANVAS_WIDTH, height / CANVAS_HEIGHT);
+      const rawNext = Math.min(width / slideWidth, height / slideHeight);
+      const next = Math.min(rawNext, 1.0);
       setScale(next > 0 ? next : 1);
     };
 
@@ -71,7 +72,7 @@ export default function CanvasSlide({
     const observer = new ResizeObserver(measure);
     observer.observe(container);
     return () => observer.disconnect();
-  }, []);
+  }, [slideWidth, slideHeight]);
 
   const singleSelected = selectedElements.length === 1 ? selectedElements[0] : null;
 
@@ -196,17 +197,29 @@ export default function CanvasSlide({
       }}
     >
       <div
-        ref={surfaceRef}
-        className="canvas-surface"
-        data-canvas-surface
+        className="canvas-scaled-wrapper"
         style={{
-          width: `${CANVAS_WIDTH}px`,
-          height: `${CANVAS_HEIGHT}px`,
-          backgroundColor: slide.background,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          width: `${slideWidth * scale}px`,
+          height: `${slideHeight * scale}px`,
+          position: 'relative',
+          flexShrink: 0,
         }}
       >
+        <div
+          ref={surfaceRef}
+          className="canvas-surface"
+          data-canvas-surface
+          style={{
+            width: `${slideWidth}px`,
+            height: `${slideHeight}px`,
+            backgroundColor: slide.background,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+          }}
+        >
         {slide.elements.map((element) => {
           const isSelected = selectedIds.includes(element.id);
           const isEditing = editingId === element.id;
@@ -245,60 +258,103 @@ export default function CanvasSlide({
             style={{
               left: Math.min(
                 Math.max(selectedElements[0].x, 8),
-                CANVAS_WIDTH - 312,
+                slideWidth - 312,
               ),
               top: Math.max(selectedElements[0].y - 52, 8),
             }}
           >
-            <label className="canvas-toolbar-toggle">
-              <input
-                type="checkbox"
-                checked={selectedElements[0].isDynamic || false}
-                onChange={() => {
-                  const element = selectedElements[0];
-                  onChange(element.id, {
-                    isDynamic: !element.isDynamic,
-                    formFieldType: element.isDynamic ? null : element.formFieldType || FORM_FIELD_TYPES[0],
-                    placeholderText: element.isDynamic ? null : element.placeholderText || `{{${FORM_FIELD_TYPES[0]}}}`,
-                  });
-                }}
-              />
-              {selectedElements[0].isDynamic ? 'Form Field' : 'Static Label'}
-            </label>
+            {selectedElements.length === 1 ? (
+              <>
+                <label className="canvas-toolbar-toggle">
+                  <input
+                    type="checkbox"
+                    checked={selectedElements[0].isDynamic || false}
+                    onChange={() => {
+                      const element = selectedElements[0];
+                      onChange(element.id, {
+                        isDynamic: !element.isDynamic,
+                        formFieldType: element.isDynamic ? null : element.formFieldType || FORM_FIELD_TYPES[0],
+                        placeholderText: element.isDynamic ? null : element.placeholderText || `{{${FORM_FIELD_TYPES[0]}}}`,
+                      });
+                    }}
+                  />
+                  {selectedElements[0].isDynamic ? 'Form Field' : 'Static Label'}
+                </label>
 
-            {selectedElements[0].isDynamic && (
-              <select
-                className="canvas-toolbar-select"
-                value={selectedElements[0].formFieldType || ''}
-                onChange={(event) => {
-                  const value = event.target.value || null;
-                  const element = selectedElements[0];
-                  onChange(element.id, {
-                    formFieldType: value,
-                    placeholderText: value ? `{{${value}}}` : null,
-                  });
-                }}
-              >
-                <option value="">Select field type</option>
-                {FORM_FIELD_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                  </option>
-                ))}
-              </select>
+                {selectedElements[0].isDynamic && (
+                  <select
+                    className="canvas-toolbar-select"
+                    value={selectedElements[0].formFieldType || ''}
+                    onChange={(event) => {
+                      const value = event.target.value || null;
+                      const element = selectedElements[0];
+                      onChange(element.id, {
+                        formFieldType: value,
+                        placeholderText: value ? `{{${value}}}` : null,
+                      });
+                    }}
+                  >
+                    <option value="">Select field type</option>
+                    {FORM_FIELD_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <button
+                  type="button"
+                  className="canvas-toolbar-delete"
+                  onClick={() => onDeleteElements([selectedElements[0].id])}
+                  title="Delete selected"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </>
+            ) : (
+              // Multi-select alignment controls
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase opacity-60 tracking-wider">
+                  Align:
+                </span>
+                <button
+                  type="button"
+                  className="px-2 py-1 text-[10px] font-mono uppercase bg-white text-black border border-black hover:bg-black hover:text-white transition-colors"
+                  onClick={() => {
+                    const targetX = selectedElements[0].x;
+                    onUpdateElements(selectedIds.slice(1), { x: targetX });
+                  }}
+                  title="Align Left (aligns x to first selected)"
+                >
+                  Left
+                </button>
+                <button
+                  type="button"
+                  className="px-2 py-1 text-[10px] font-mono uppercase bg-white text-black border border-black hover:bg-black hover:text-white transition-colors"
+                  onClick={() => {
+                    const targetY = selectedElements[0].y;
+                    onUpdateElements(selectedIds.slice(1), { y: targetY });
+                  }}
+                  title="Align Top (aligns y to first selected)"
+                >
+                  Top
+                </button>
+                <div className="w-[1px] h-4 bg-[var(--line)] mx-1" />
+                <button
+                  type="button"
+                  className="canvas-toolbar-delete p-1 flex items-center justify-center"
+                  onClick={() => onDeleteElements(selectedIds)}
+                  title="Delete selected group"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             )}
-
-            <button
-              type="button"
-              className="canvas-toolbar-delete"
-              onClick={() => onDeleteElements([selectedElements[0].id])}
-              title="Delete selected"
-            >
-              <Trash2 size={16} />
-            </button>
           </div>
         )}
       </div>
+    </div>
 
       {editable && singleSelected && moveableTarget && (
         <Moveable

@@ -137,6 +137,8 @@ export function createTemplate(partial = {}) {
   return {
     title: 'Untitled template',
     background: DEFAULT_CANVAS_BACKGROUND,
+    width: CANVAS_WIDTH,
+    height: CANVAS_HEIGHT,
     ...rest,
     elements: elements.map((element) =>
       element.type ? normalizeElement(element) : element,
@@ -171,6 +173,8 @@ export function normalizeTemplate(raw) {
     id: raw.id,
     title: raw.title || 'Untitled template',
     background: raw.background || DEFAULT_CANVAS_BACKGROUND,
+    width: Number(raw.width) || CANVAS_WIDTH,
+    height: Number(raw.height) || CANVAS_HEIGHT,
     elements: Array.isArray(raw.elements)
       ? raw.elements.map(normalizeElement).filter(Boolean)
       : [],
@@ -193,6 +197,8 @@ export function createSlide(partial = {}) {
   const { elements = [], ...rest } = partial;
   return {
     background: DEFAULT_CANVAS_BACKGROUND,
+    width: CANVAS_WIDTH,
+    height: CANVAS_HEIGHT,
     ...rest,
     elements: elements.map((element) =>
       element.type ? normalizeElement(element) : element,
@@ -206,6 +212,8 @@ export function normalizeSlide(raw) {
   return {
     id: raw.id,
     background: raw.background || DEFAULT_CANVAS_BACKGROUND,
+    width: Number(raw.width) || CANVAS_WIDTH,
+    height: Number(raw.height) || CANVAS_HEIGHT,
     elements: Array.isArray(raw.elements)
       ? raw.elements.map(normalizeElement).filter(Boolean)
       : [],

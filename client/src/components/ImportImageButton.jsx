@@ -1,10 +1,16 @@
 import { useState, useRef } from 'react';
-import { Camera, Upload, Loader2 } from 'lucide-react';
-import { authFetch } from '../lib/api.js';
+import { Camera, Upload, Loader2, Sparkles } from 'lucide-react';
+import { authFetch, parseApiError } from '../lib/api.js';
+import { useToast } from '../context/ToastContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 export default function ImportImageButton({ onAnalysisComplete, apiBaseUrl }) {
+  const { showError, showSuccess } = useToast();
+  const { isPro } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const fileInputRef = useRef(null);
@@ -27,7 +33,8 @@ export default function ImportImageButton({ onAnalysisComplete, apiBaseUrl }) {
       });
 
       if (!response.ok) {
-        throw new Error('Analysis failed');
+        const message = await parseApiError(response, 'Failed to analyze image.');
+        throw new Error(message);
       }
 
       const data = await response.json();
@@ -37,28 +44,34 @@ export default function ImportImageButton({ onAnalysisComplete, apiBaseUrl }) {
         const templateData = {
           title: 'Imported Receipt Template',
           background: data.canvas.backgroundColor || '#ffffff',
-          elements: data.elements.map((el, index) => ({
-            id: el.id || `el_${Date.now()}_${index}`,
-            type: el.type || 'text',
-            x: el.x || 0,
-            y: el.y || 0,
-            width: 200, // Default width, can be adjusted
-            height: 30, // Default height, can be adjusted
-            rotation: 0,
-            zIndex: index,
-            isDynamic: el.isDynamic || false,
-            formFieldType: el.isDynamic ? el.fieldKey : null,
-            placeholderText: el.isDynamic ? `{{${el.fieldKey}}}` : null,
-            props: {
-              text: el.content || '',
-              fontSize: el.fontSize || 14,
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 400,
-              color: '#000000',
-              textAlign: 'left',
-              lineHeight: 1.4,
-            },
-          })),
+          width: data.canvas.width || 400,
+          height: Math.max(400, Math.min(1200, data.canvas.height || 620)),
+          elements: data.elements.map((el, index) => {
+            const isTable = el.type === 'table';
+            return {
+              id: el.id || `el_${Date.now()}_${index}`,
+              type: el.type || 'text',
+              x: el.x || 0,
+              y: el.y || 0,
+              width: el.width || (isTable ? 360 : 200),
+              height: el.height || (isTable ? 20 : 30),
+              rotation: 0,
+              zIndex: index,
+              isDynamic: isTable ? true : (el.isDynamic || false),
+              formFieldType: isTable || el.isDynamic ? el.fieldKey : null,
+              placeholderText: isTable || el.isDynamic ? `{{${el.fieldKey}}}` : null,
+              props: {
+                text: el.content || '',
+                fontSize: el.fontSize || 14,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 400,
+                color: '#000000',
+                textAlign: 'left',
+                lineHeight: 1.4,
+                ...(isTable && el.columns ? { columns: el.columns } : {}),
+              },
+            };
+          }),
         };
         
         onAnalysisComplete(templateData);
@@ -67,6 +80,7 @@ export default function ImportImageButton({ onAnalysisComplete, apiBaseUrl }) {
       }
     } catch (error) {
       console.error('Image analysis error:', error);
+      showError(error.message || 'Failed to analyze image.');
       setStatus('> error: analysis_failed');
       setTimeout(() => {
         setLoading(false);
@@ -80,6 +94,11 @@ export default function ImportImageButton({ onAnalysisComplete, apiBaseUrl }) {
   };
 
   const handleClick = () => {
+    if (!isPro) {
+      showError('AI Template Generation is a Pro feature. Upgrade to unlock!');
+      navigate('/pricing');
+      return;
+    }
     fileInputRef.current?.click();
   };
 
@@ -107,11 +126,11 @@ export default function ImportImageButton({ onAnalysisComplete, apiBaseUrl }) {
         className="hidden"
       />
       <button
-        className="editor-secondary"
+        className="editor-secondary group"
         onClick={handleClick}
         type="button"
       >
-        <Camera size={16} />
+        <Sparkles size={16} className={!isPro ? "text-[var(--accent-red)]" : ""} />
         Import Receipt from Image
         <Upload size={14} />
       </button>

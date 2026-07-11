@@ -8,6 +8,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
+import { authFetch } from '../lib/api.js';
 
 const AuthContext = createContext(null);
 
@@ -16,9 +17,30 @@ const displayName = (user) => user?.user_metadata?.full_name || '';
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
+  const [subscription, setSubscription] = useState({ status: 'inactive', plan_type: 'free' });
+  const [subLoading, setSubLoading] = useState(true);
   // `loading` covers the initial async getSession(); we start true so the app
   // doesn't flash the login screen before the stored session is confirmed.
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user && !loading) {
+      setSubLoading(true);
+      authFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/stripe/status`)
+        .then(res => res.json())
+        .then(data => {
+          setSubscription(data);
+          setSubLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch subscription', err);
+          setSubLoading(false);
+        });
+    } else if (!user && !loading) {
+      setSubscription({ status: 'inactive', plan_type: 'free' });
+      setSubLoading(false);
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     const devBypass = import.meta.env.DEV && new URLSearchParams(window.location.search).get('devAuth') === '1';
@@ -100,8 +122,11 @@ export function AuthProvider({ children }) {
       updateProfile,
       updatePassword,
       resendConfirmation,
+      subscription,
+      subLoading,
+      isPro: subscription.plan_type === 'pro' && subscription.status === 'active',
     }),
-    [session, user, loading],
+    [session, user, loading, subscription, subLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

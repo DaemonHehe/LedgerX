@@ -473,6 +473,51 @@ function TableFields({ element, onChange }) {
           />
         </Row>
       </div>
+      <div className="editor-divider" />
+      <Row label="Table Style">
+        <select
+          className={fieldClass}
+          value={props.tableStyle || 'grid'}
+          onChange={(e) => set('tableStyle', e.target.value)}
+        >
+          <option value="none">None</option>
+          <option value="grid">Grid</option>
+          <option value="minimal">Minimal</option>
+          <option value="zebra">Zebra</option>
+          <option value="compact-list">Compact List</option>
+          <option value="ledger-double">Ledger Double</option>
+          <option value="boxed-total">Boxed Total</option>
+        </select>
+      </Row>
+      <Row label="Show Total">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="showTotal"
+            checked={props.showTotal !== false}
+            onChange={(e) => set('showTotal', e.target.checked)}
+          />
+          <label htmlFor="showTotal" className="text-sm">
+            Show Total Row
+          </label>
+        </div>
+      </Row>
+      {props.showTotal !== false && (
+        <Row label="Total Style">
+          <select
+            className={fieldClass}
+            value={props.totalStyle || 'grid'}
+            onChange={(e) => set('totalStyle', e.target.value)}
+          >
+            <option value="none">None</option>
+            <option value="grid">Bordered Grid</option>
+            <option value="minimal">Minimal Red Line</option>
+            <option value="solid">Solid Bar</option>
+            <option value="ledger-double">Ledger Double</option>
+            <option value="boxed-total">Highlighted Box</option>
+          </select>
+        </Row>
+      )}
     </>
   );
 }
@@ -655,6 +700,9 @@ export default function PropertiesPanel({
   onDeckTitle,
   slideBackground,
   onSlideBackground,
+  templateWidth,
+  templateHeight,
+  onTemplateDimensions,
   formFieldTypes = [],
 }) {
   const hasSelection = selectedElements.length > 0;
@@ -686,6 +734,24 @@ export default function PropertiesPanel({
               onChange={(e) => onSlideBackground(e.target.value)}
             />
           </Row>
+          <div className="grid grid-cols-2 gap-3">
+            <Row label="Width">
+              <input
+                type="number"
+                className={fieldClass}
+                value={templateWidth || 1280}
+                onChange={(e) => onTemplateDimensions(Number(e.target.value) || 1280, templateHeight || 720)}
+              />
+            </Row>
+            <Row label="Height">
+              <input
+                type="number"
+                className={fieldClass}
+                value={templateHeight || 720}
+                onChange={(e) => onTemplateDimensions(templateWidth || 1280, Number(e.target.value) || 720)}
+              />
+            </Row>
+          </div>
           <p className="text-xs text-[#9a8a6a]">
             Select an element on the canvas to edit its properties, or drag one
             from the Elements palette.

@@ -114,11 +114,11 @@ function ProfileScreen() {
 
   return (
     <main className="app-shell min-h-screen overflow-x-hidden p-6 text-neutral-950">
-      <div className="mx-auto max-w-xl border border-[#e0e0e0] bg-white p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#ff0000]">
+      <div className="mx-auto max-w-xl border border-line bg-surface p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-red">
           Account
         </p>
-        <h1 className="mb-6 text-3xl font-semibold text-[#000000]">Profile</h1>
+        <h1 className="mb-6 text-3xl font-semibold text-text">Profile</h1>
 
         {!emailConfirmed && (
           <div className="profile-banner">

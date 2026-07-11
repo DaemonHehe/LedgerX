@@ -1,6 +1,8 @@
 import { LogIn, UserPlus } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { Logo } from './Logo.jsx';
 
 const fieldClass = 'editor-field w-full border px-3 py-2.5 text-sm outline-none transition';
 
@@ -109,7 +111,12 @@ function LoginScreen() {
   return (
     <main className="login-shell">
       <form className="login-panel" onSubmit={handleSubmit}>
-        <div className="login-mark">RG</div>
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <Logo className="w-10 h-10 rounded-none" />
+          <Link to="/" className="font-mono text-sm font-bold tracking-tight uppercase no-underline text-text">
+            LedgerX
+          </Link>
+        </div>
         <p className="login-kicker">LedgerX</p>
         <h1>{isSignUp ? 'Create account' : 'Sign in'}</h1>
 

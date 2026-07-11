@@ -8,6 +8,9 @@
 import { supabase } from './supabaseClient.js';
 
 async function getAccessToken() {
+  const devBypass = import.meta.env.DEV && new URLSearchParams(window.location.search).get('devAuth') === '1';
+  if (devBypass) return 'dev-token';
+
   const { data } = await supabase.auth.getSession();
   return data?.session?.access_token || null;
 }
@@ -33,4 +36,14 @@ export async function authFetch(input, init = {}) {
   }
 
   return response;
+}
+
+export async function parseApiError(response, fallback = 'Request failed.') {
+  try {
+    const data = await response.json();
+    if (data?.error) return data.error;
+  } catch {
+    // Response body was not JSON.
+  }
+  return fallback;
 }

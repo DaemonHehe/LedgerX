@@ -1,0 +1,23 @@
+{
+  "name": "rg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DaemonHehe/LedgeX.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DaemonHehe/LedgeX/issues"
+  },
+  "homepage": "https://github.com/DaemonHehe/LedgeX#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}

@@ -6,10 +6,6 @@
 // regardless of zoom/window size, and keeps this module JSX-free.
 
 import html2canvas from 'html2canvas';
-import {
-  CANVAS_HEIGHT,
-  CANVAS_WIDTH,
-} from './deckModel.js';
 import { renderShapeSvg } from './shapeSvg.js';
 
 const px = (n) => `${n}px`;
@@ -102,15 +98,18 @@ function buildElementNode(element) {
  */
 export async function exportSlidePng(slide, filename = 'slide.png') {
   const host = document.createElement('div');
+  const slideWidth = slide.width || 1280;
+  const slideHeight = slide.height || 720;
+
   // Position fully off-screen but laid out (not display:none, which breaks
   // html2canvas measurements).
   host.style.cssText =
-    'position:fixed;left:-99999px;top:0;width:1280px;height:720px;z-index:-1;';
+    `position:fixed;left:-99999px;top:0;width:${slideWidth}px;height:${slideHeight}px;z-index:-1;`;
 
   const surface = document.createElement('div');
   applyCommon(surface, {
-    width: px(CANVAS_WIDTH),
-    height: px(CANVAS_HEIGHT),
+    width: px(slideWidth),
+    height: px(slideHeight),
     background: slide.background,
     position: 'relative',
     overflow: 'hidden',
@@ -133,10 +132,10 @@ export async function exportSlidePng(slide, filename = 'slide.png') {
       backgroundColor: slide.background,
       scale: 2,
       useCORS: true,
-      width: CANVAS_WIDTH,
-      height: CANVAS_HEIGHT,
-      windowWidth: CANVAS_WIDTH,
-      windowHeight: CANVAS_HEIGHT,
+      width: slideWidth,
+      height: slideHeight,
+      windowWidth: slideWidth,
+      windowHeight: slideHeight,
     });
 
     const link = document.createElement('a');
