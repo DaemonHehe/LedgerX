@@ -14,6 +14,7 @@ import CheckoutSuccess from './components/CheckoutSuccess.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import NotFound from './pages/NotFound.jsx';
 import GlassNav from './components/GlassNav.jsx';
+import Footer from './components/Footer.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { authFetch } from './lib/api.js';
@@ -204,7 +205,7 @@ function Shell() {
 
   if (loading || subLoading) {
     return (
-      <main className="app-shell grid min-h-screen place-items-center">
+      <main className="app-shell grid flex-1 place-items-center">
         <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#ff0000]">
           Loading…
         </p>
@@ -225,7 +226,7 @@ function Shell() {
 
   if (!isPro) {
     return (
-      <main className="app-shell min-h-screen overflow-x-hidden px-4 pb-4 pt-20 md:px-6 md:pb-6 md:pt-24">
+      <main className="app-shell flex-1 overflow-x-hidden px-4 pb-4 pt-20 md:px-6 md:pb-6 md:pt-24 flex flex-col">
         <GlassNav />
         <Routes>
           <Route path="/pricing" element={<Pricing />} />
@@ -238,7 +239,7 @@ function Shell() {
   }
 
   return (
-    <main className="app-shell min-h-screen overflow-x-hidden px-4 pb-4 pt-20 md:px-6 md:pb-6 md:pt-24">
+    <main className="app-shell flex-1 overflow-x-hidden px-4 pb-4 pt-20 md:px-6 md:pb-6 md:pt-24 flex flex-col">
       <GlassNav />
 
       <Routes>
@@ -317,7 +318,10 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <ToastProvider>
-          <Shell />
+          <div className="flex flex-col min-h-screen">
+            <Shell />
+            <Footer />
+          </div>
         </ToastProvider>
       </BrowserRouter>
     </AuthProvider>

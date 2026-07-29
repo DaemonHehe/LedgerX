@@ -8,7 +8,7 @@ export default function NotFound() {
 
   return (
     <div className="not-found-page min-h-screen flex flex-col items-center justify-center bg-[var(--bg-primary)] text-[var(--ink)] px-6">
-      <Logo className="w-12 h-12 rounded-none mb-8" />
+      <Logo full={true} className="h-12 w-auto mb-8" />
       <h1 className="not-found-code rounded-none">404</h1>
       <p className="not-found-message rounded-none">SYSTEM ERROR: ROUTE NOT FOUND</p>
       <Link

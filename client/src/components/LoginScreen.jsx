@@ -111,10 +111,9 @@ function LoginScreen() {
   return (
     <main className="login-shell">
       <form className="login-panel" onSubmit={handleSubmit}>
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <Logo className="w-10 h-10 rounded-none" />
-          <Link to="/" className="font-mono text-sm font-bold tracking-tight uppercase no-underline text-text">
-            LedgerX
+        <div className="flex items-center justify-center mb-2">
+          <Link to="/" className="no-underline text-text">
+            <Logo full={true} className="h-10 w-auto" />
           </Link>
         </div>
         <p className="login-kicker">LedgerX</p>

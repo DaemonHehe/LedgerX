@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo.jsx';
-import { ArrowRight, Sparkles, LayoutTemplate, Database, Check } from 'lucide-react';
+import { ArrowRight, Sparkles, LayoutTemplate, Database, Check, Sun, Moon } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 const FEATURES = [
@@ -61,10 +62,21 @@ export default function LandingPage() {
   const { scrollYProgress } = useScroll();
   const yHero = useTransform(scrollYProgress, [0, 1], [0, 300]);
 
+  const [theme, setTheme] = useState(
+    typeof window !== 'undefined' ? document.documentElement.dataset.theme || 'dark' : 'dark'
+  );
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    document.documentElement.dataset.theme = newTheme;
+    localStorage.setItem('ledgerx-theme', newTheme);
+  };
+
   const goToAuth = () => navigate('/login');
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-white overflow-x-hidden selection:bg-[var(--accent-red)] selection:text-white pb-0">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--ink)] overflow-x-hidden selection:bg-[var(--accent-red)] selection:text-white pb-0">
       {/* Navigation */}
       <motion.nav 
         initial={{ opacity: 0, y: -20 }}
@@ -73,19 +85,25 @@ export default function LandingPage() {
         className="fixed top-0 w-full z-50 bg-[var(--bg-primary)]/90 backdrop-blur border-b border-[var(--line)]"
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Logo className="w-8 h-8 rounded-none" />
-            <span className="font-mono text-sm font-bold tracking-tight uppercase">
-              LedgerX
-            </span>
+          <div className="flex items-center">
+            <Logo full={true} className="h-8 w-auto" />
           </div>
-          <button
-            type="button"
-            onClick={goToAuth}
-            className="border border-[var(--line)] hover:border-[var(--accent-red)] hover:text-[var(--accent-red)] transition-colors rounded-none px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em]"
-          >
-            Sign In
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 flex items-center justify-center border border-transparent text-[var(--ink-soft)] hover:text-[var(--ink)] hover:border-[var(--line)] transition-colors rounded-none"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              type="button"
+              onClick={goToAuth}
+              className="border border-[var(--line)] hover:border-[var(--accent-red)] hover:text-[var(--accent-red)] transition-colors rounded-none px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em]"
+            >
+              Sign In
+            </button>
+          </div>
         </div>
       </motion.nav>
 
@@ -108,7 +126,7 @@ export default function LandingPage() {
             
             {/* Reactbits-style shiny sweep */}
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--ink)]/20 to-transparent -skew-x-12"
               initial={{ x: '-150%' }}
               animate={{ x: '150%' }}
               transition={{ repeat: Infinity, duration: 2, repeatDelay: 1, ease: 'linear' }}
@@ -120,7 +138,7 @@ export default function LandingPage() {
             className="text-5xl sm:text-6xl md:text-8xl font-bold tracking-tight mb-8 leading-none"
           >
             RECEIPTS. <br />
-            <span className="text-[var(--ink-soft)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--ink-soft)] to-white">
+            <span className="text-[var(--ink-soft)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--ink-soft)] to-[var(--ink)]">
               ZERO FRICTION.
             </span>
           </motion.h1>
@@ -138,7 +156,7 @@ export default function LandingPage() {
           >
             <button
               onClick={goToAuth}
-              className="group relative flex items-center justify-center gap-3 bg-white text-black px-8 py-4 w-full sm:w-auto hover:bg-[var(--accent-red)] hover:text-white transition-all duration-300 font-mono font-bold tracking-widest uppercase text-sm border-2 border-white hover:border-[var(--accent-red)] overflow-hidden"
+              className="group relative flex items-center justify-center gap-3 bg-[var(--ink)] text-[var(--bg-primary)] px-8 py-4 w-full sm:w-auto hover:bg-[var(--accent-red)] hover:text-white transition-all duration-300 font-mono font-bold tracking-widest uppercase text-sm border-2 border-[var(--ink)] hover:border-[var(--accent-red)] overflow-hidden"
             >
               Start Creating
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -207,7 +225,7 @@ export default function LandingPage() {
             </ul>
             <button
               onClick={goToAuth}
-              className="border border-[var(--line)] hover:border-[var(--accent-red)] text-white px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] transition-colors"
+              className="border border-[var(--line)] hover:border-[var(--accent-red)] hover:text-[var(--accent-red)] text-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] transition-colors"
             >
               See It In Action
             </button>
@@ -221,7 +239,7 @@ export default function LandingPage() {
             className="relative aspect-square bg-[var(--bg-tertiary)] border border-[var(--line)] p-8 overflow-hidden group"
           >
             {/* Abstract visual representing AI mapping */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+            <div className="absolute inset-0 bg-[linear-gradient(var(--canvas-grid-color)_1px,transparent_1px),linear-gradient(90deg,var(--canvas-grid-color)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
             
             {/* Scanning Laser Animation */}
             <motion.div 
@@ -231,7 +249,7 @@ export default function LandingPage() {
             />
 
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 border border-[var(--accent-red)]/30 group-hover:border-[var(--accent-red)] transition-colors duration-700 flex items-center justify-center">
-              <div className="w-1/2 h-1/2 border border-white/20 relative">
+              <div className="w-1/2 h-1/2 border border-[var(--line)] relative">
                 <motion.div 
                   className="absolute -top-1 -left-1 w-2 h-2 bg-[var(--accent-red)]"
                   animate={{ scale: [1, 1.5, 1] }}
@@ -269,10 +287,10 @@ export default function LandingPage() {
           className="relative z-10"
         >
           <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            READY TO UPGRADE?
+            READY TO STREAMLINE YOUR BUSINESS?
           </h2>
           <p className="text-white/90 max-w-xl mx-auto mb-10 text-lg">
-            Join professional developers generating thousands of beautiful documents effortlessly. Create an account to access our Pro plans.
+            Join thousands of small business owners generating professional, branded receipts effortlessly. Create an account to access our Pro plans.
           </p>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -285,12 +303,6 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-black py-8 px-6 text-center">
-        <p className="font-mono text-xs text-[var(--ink-soft)] uppercase tracking-widest">
-          © {new Date().getFullYear()} LedgerX System. All rights reserved.
-        </p>
-      </footer>
     </div>
   );
 }
